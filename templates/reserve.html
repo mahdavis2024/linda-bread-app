@@ -1,13 +1,15 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Reserve Bread</title>
-</head>
-<body>
-    <h1>Reserve Bread</h1>
+{% extends "base.html" %}
 
-    <p>
-        Reservation form coming soon.
-    </p>
-</body>
-</html>
+{% block content %}
+
+<h1>Reserve Bread</h1>
+
+<p>
+    Reservation form coming soon.
+</p>
+
+<p>
+    <a href="{{ url_for('home') }}">Home</a>
+</p>
+
+{% endblock %}
