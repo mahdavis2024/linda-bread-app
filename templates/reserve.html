@@ -15,7 +15,9 @@
             type="text" 
             id="customer_name" 
             name="customer_name" 
-            value="{{ customer_name | default('') }}" 
+            value="{{ customer_name | default('') }}"
+            minlength="2"
+            maxlength="100" 
             required
         >
     </p>
@@ -44,22 +46,16 @@
 
     <p>
         <label for="quantity">Quantity:</label>
-        <select id="quantity" name="quantity" required>
-            <option value="3"
-                {% if quantity | default('3') == '3' %}selected{% endif %}>
-                3 breads
-            </option>
-
-            <option value="6"
-                {% if quantity | default('3') == '6' %}selected{% endif %}>
-                6 breads
-            </option>
-
-            <option value="9"
-                {% if quantity | default('3') == '9' %}selected{% endif %}>
-                9 breads
-            </option>
-        </select>
+        <input
+            type="number"
+            id="quantity"
+            name="quantity"
+            value="{{ quantity | default('3') }}"
+            min="1"
+            max="21"
+            step="1"
+            required
+        >
     </p>
 
     <button type="submit">Continue</button>

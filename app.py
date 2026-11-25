@@ -30,13 +30,49 @@ def reserve():
                 quantity=quantity
             )
 
+        if len(customer_name) < 2:
+            return render_template(
+                "reserve.html",
+                title="Reserve Bread",
+                error="Please enter a name with at least 2 characters.",
+                customer_name=customer_name,
+                phone=phone,
+                delivery_date=delivery_date,
+                quantity=quantity
+            )
+
+        try:
+            quantity_number = int(quantity)
+        except ValueError:
+            return render_template(
+                "reserve.html",
+                title="Reserve Bread",
+                error="Please enter a valid bread quantity.",
+                customer_name=customer_name,
+                phone=phone,
+                delivery_date=delivery_date,
+                quantity=quantity
+            )
+
+        if quantity_number < 1 or quantity_number > 21:
+            return render_template(
+                "reserve.html",
+                title="Reserve Bread",
+                error="Quantity must be between 1 and 21 breads.",
+                customer_name=customer_name,
+                phone=phone,
+                delivery_date=delivery_date,
+                quantity=quantity
+            )
+
+        # Success: If all validations pass, render the confirmation page
         return render_template(
             "confirmation.html",
             title="Reservation Received",
             customer_name=customer_name,
             phone=phone,
             delivery_date=delivery_date,
-            quantity=quantity
+            quantity=quantity_number
         )
 
     return render_template(
