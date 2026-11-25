@@ -4,9 +4,32 @@
 
 <h1>Reserve Bread</h1>
 
-<p>
-    Reservation form coming soon.
-</p>
+<form method="POST" action="{{ url_for('reserve') }}">
+    <p>
+        <label for="customer_name">Name:</label>
+        <input type="text" id="customer_name" name="customer_name">
+    </p>
 
+    <p>
+        <label for="phone">Phone number:</label>
+        <input type="tel" id="phone" name="phone">
+    </p>
+
+    <p>
+        <label for="delivery_date">Production date:</label>
+        <input type="date" id="delivery_date" name="delivery_date">
+    </p>
+
+    <p>
+        <label for="quantity">Quantity:</label>
+        <select id="quantity" name="quantity">
+            <option value="3">3 breads</option>
+            <option value="6">6 breads</option>
+            <option value="9">9 breads</option>
+        </select>
+    </p>
+
+    <button type="submit">Continue</button>
+</form>
 
 {% endblock %}

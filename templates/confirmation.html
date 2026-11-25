@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h1>Reservation Received</h1>
+
+<p>Thank you, {{ customer_name }}.</p>
+
+<p>
+    Your request for {{ quantity }} breads on {{ delivery_date }}
+    has been received.
+</p>
+
+<p>
+    We will use this phone number if we need to contact you:
+    {{ phone }}
+</p>
+
+<p>
+    <a href="{{ url_for('home') }}">Return to Home</a>
+</p>
+
+{% endblock %}
