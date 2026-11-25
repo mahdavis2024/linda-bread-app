@@ -4,6 +4,20 @@ from flask import Flask, render_template, request
 
 app = Flask(__name__)
 
+def calculate_price_cents(quantity):
+    prices_up_to_six = {
+        1: 200,
+        2: 400,
+        3: 500,
+        4: 700,
+        5: 900,
+        6: 1000
+    }
+
+    if quantity <= 6:
+        return prices_up_to_six[quantity]
+
+    return 1000 + (quantity - 6) * 150
 
 @app.route("/")
 def home():
@@ -15,7 +29,7 @@ def home():
 
 @app.route("/reserve", methods=["GET", "POST"])
 def reserve():
-    
+
     today = date.today()
     minimum_date = today + timedelta(days=1)
     maximum_date = today + timedelta(days=14)
@@ -137,17 +151,25 @@ def reserve():
                 maximum_date=maximum_date_text
             )
 
-        # Success: If all validations pass, render the confirmation page
+        amount_cents = calculate_price_cents(quantity_number)
+
+        amount_text = (
+                f"{amount_cents // 100}."
+                f"{amount_cents % 100:02d}"
+            )
+
+        # Success: If all validations pass, render the confirmation response
         return render_template(
             "confirmation.html",
             title="Reservation Received",
             customer_name=customer_name,
             phone=phone,
             delivery_date=delivery_date,
-            quantity=quantity_number,
-            minimum_date=minimum_date_text,
-            maximum_date=maximum_date_text
+            quantity=quantity_number, 
+            amount=amount_text
         )
+
+
 
     return render_template(
         "reserve.html",
