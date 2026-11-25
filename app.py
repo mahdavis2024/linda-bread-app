@@ -14,10 +14,17 @@ def home():
 @app.route("/reserve", methods=["GET", "POST"])
 def reserve():
     if request.method == "POST":
-        customer_name = request.form["customer_name"]
-        phone = request.form["phone"]
-        delivery_date = request.form["delivery_date"]
-        quantity = request.form["quantity"]
+        customer_name = request.form.get("customer_name", "").strip()
+        phone = request.form.get("phone", "").strip()
+        delivery_date = request.form.get("delivery_date", "").strip()
+        quantity = request.form.get("quantity", "").strip()
+
+        if not customer_name or not phone or not delivery_date or not quantity:
+            return render_template(
+                "reserve.html",
+                title="Reserve Bread",
+                error="Please complete all fields."
+            )
 
         return render_template(
             "confirmation.html",

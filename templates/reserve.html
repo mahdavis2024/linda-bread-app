@@ -4,25 +4,29 @@
 
 <h1>Reserve Bread</h1>
 
+{% if error %}
+<p>{{ error }}</p>
+{% endif %}
+
 <form method="POST" action="{{ url_for('reserve') }}">
     <p>
         <label for="customer_name">Name:</label>
-        <input type="text" id="customer_name" name="customer_name">
+        <input type="text" id="customer_name" name="customer_name" required>
     </p>
 
     <p>
         <label for="phone">Phone number:</label>
-        <input type="tel" id="phone" name="phone">
+        <input type="tel" id="phone" name="phone" required>
     </p>
 
     <p>
         <label for="delivery_date">Production date:</label>
-        <input type="date" id="delivery_date" name="delivery_date">
+        <input type="date" id="delivery_date" name="delivery_date" required>
     </p>
 
     <p>
         <label for="quantity">Quantity:</label>
-        <select id="quantity" name="quantity">
+        <select id="quantity" name="quantity" required>
             <option value="3">3 breads</option>
             <option value="6">6 breads</option>
             <option value="9">9 breads</option>
