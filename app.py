@@ -1,3 +1,5 @@
+import re
+from datetime import date, timedelta
 from flask import Flask, render_template, request
 
 app = Flask(__name__)
@@ -13,6 +15,13 @@ def home():
 
 @app.route("/reserve", methods=["GET", "POST"])
 def reserve():
+    
+    today = date.today()
+    minimum_date = today + timedelta(days=1)
+    maximum_date = today + timedelta(days=14)
+    minimum_date_text = minimum_date.isoformat()
+    maximum_date_text = maximum_date.isoformat()
+
     if request.method == "POST":
         customer_name = request.form.get("customer_name", "").strip()
         phone = request.form.get("phone", "").strip()
@@ -27,7 +36,9 @@ def reserve():
                 customer_name=customer_name,
                 phone=phone,
                 delivery_date=delivery_date,
-                quantity=quantity
+                quantity=quantity,
+                minimum_date=minimum_date_text,
+                maximum_date=maximum_date_text
             )
 
         if len(customer_name) < 2:
@@ -38,7 +49,64 @@ def reserve():
                 customer_name=customer_name,
                 phone=phone,
                 delivery_date=delivery_date,
-                quantity=quantity
+                quantity=quantity,
+                minimum_date=minimum_date_text,
+                maximum_date=maximum_date_text
+            )
+
+        if not re.fullmatch(r"[0-9+()\-\s]+", phone):
+            return render_template(
+                "reserve.html",
+                title="Reserve Bread",
+                error="Please enter a valid phone number.",
+                customer_name=customer_name,
+                phone=phone,
+                delivery_date=delivery_date,
+                quantity=quantity,
+                minimum_date=minimum_date_text,
+                maximum_date=maximum_date_text
+            )
+
+        phone_digits = re.sub(r"\D", "", phone)
+        if len(phone_digits) < 7 or len(phone_digits) > 15:
+            return render_template(
+                "reserve.html",
+                title="Reserve Bread",
+                error="The phone number must contain between 7 and 15 digits.",
+                customer_name=customer_name,
+                phone=phone,
+                delivery_date=delivery_date,
+                quantity=quantity,
+                minimum_date=minimum_date_text,
+                maximum_date=maximum_date_text
+            )
+
+        try:
+            delivery_date_value = date.fromisoformat(delivery_date)
+        except ValueError:
+            return render_template(
+                "reserve.html",
+                title="Reserve Bread",
+                error="Please enter a valid production date.",
+                customer_name=customer_name,
+                phone=phone,
+                delivery_date=delivery_date,
+                quantity=quantity,
+                minimum_date=minimum_date_text,
+                maximum_date=maximum_date_text
+            )
+
+        if delivery_date_value < minimum_date or delivery_date_value > maximum_date:
+            return render_template(
+                "reserve.html",
+                title="Reserve Bread",
+                error="Please select a production date within the available booking period.",
+                customer_name=customer_name,
+                phone=phone,
+                delivery_date=delivery_date,
+                quantity=quantity,
+                minimum_date=minimum_date_text,
+                maximum_date=maximum_date_text
             )
 
         try:
@@ -51,7 +119,9 @@ def reserve():
                 customer_name=customer_name,
                 phone=phone,
                 delivery_date=delivery_date,
-                quantity=quantity
+                quantity=quantity,
+                minimum_date=minimum_date_text,
+                maximum_date=maximum_date_text
             )
 
         if quantity_number < 1 or quantity_number > 21:
@@ -62,7 +132,9 @@ def reserve():
                 customer_name=customer_name,
                 phone=phone,
                 delivery_date=delivery_date,
-                quantity=quantity
+                quantity=quantity,
+                minimum_date=minimum_date_text,
+                maximum_date=maximum_date_text
             )
 
         # Success: If all validations pass, render the confirmation page
@@ -72,12 +144,16 @@ def reserve():
             customer_name=customer_name,
             phone=phone,
             delivery_date=delivery_date,
-            quantity=quantity_number
+            quantity=quantity_number,
+            minimum_date=minimum_date_text,
+            maximum_date=maximum_date_text
         )
 
     return render_template(
         "reserve.html",
-        title="Reserve Bread"
+        title="Reserve Bread",
+        minimum_date=minimum_date_text,
+        maximum_date=maximum_date_text
     )
 
 if __name__ == "__main__":
