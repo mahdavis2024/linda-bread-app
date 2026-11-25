@@ -11,25 +11,54 @@
 <form method="POST" action="{{ url_for('reserve') }}">
     <p>
         <label for="customer_name">Name:</label>
-        <input type="text" id="customer_name" name="customer_name" required>
+        <input 
+            type="text" 
+            id="customer_name" 
+            name="customer_name" 
+            value="{{ customer_name | default('') }}" 
+            required
+        >
     </p>
 
     <p>
         <label for="phone">Phone number:</label>
-        <input type="tel" id="phone" name="phone" required>
+        <input 
+            type="tel" 
+            id="phone" 
+            name="phone" 
+            value="{{ phone | default('') }}" 
+            required
+        >
     </p>
 
     <p>
         <label for="delivery_date">Production date:</label>
-        <input type="date" id="delivery_date" name="delivery_date" required>
+        <input 
+            type="date" 
+            id="delivery_date" 
+            name="delivery_date" 
+            value="{{ delivery_date | default('') }}" 
+            required
+        >
     </p>
 
     <p>
         <label for="quantity">Quantity:</label>
         <select id="quantity" name="quantity" required>
-            <option value="3">3 breads</option>
-            <option value="6">6 breads</option>
-            <option value="9">9 breads</option>
+            <option value="3"
+                {% if quantity | default('3') == '3' %}selected{% endif %}>
+                3 breads
+            </option>
+
+            <option value="6"
+                {% if quantity | default('3') == '6' %}selected{% endif %}>
+                6 breads
+            </option>
+
+            <option value="9"
+                {% if quantity | default('3') == '9' %}selected{% endif %}>
+                9 breads
+            </option>
         </select>
     </p>
 

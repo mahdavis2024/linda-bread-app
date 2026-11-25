@@ -23,7 +23,11 @@ def reserve():
             return render_template(
                 "reserve.html",
                 title="Reserve Bread",
-                error="Please complete all fields."
+                error="Please complete all fields.",
+                customer_name=customer_name,
+                phone=phone,
+                delivery_date=delivery_date,
+                quantity=quantity
             )
 
         return render_template(
