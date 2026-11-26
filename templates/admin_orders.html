@@ -4,6 +4,10 @@
 
 <h1>Orders</h1>
 
+<p>
+    <a href="{{ url_for('admin_logout') }}">Log Out</a>
+</p>
+
 {% if orders %}
 
 <table>
@@ -29,7 +33,7 @@
             <td>{{ order.created_at | portugal_datetime }}</td>
             <td>{{ order.customer_name }}</td>
             <td>{{ order.phone }}</td>
-            <td>{{ order.delivery_date.strftime("%d/%m/%Y") }}</td>
+            <td>{{ order.delivery_date.strftime("%d-%m-%Y") }}</td>
             <td>{{ order.quantity }}</td>
             <td>€{{ "%.2f" | format(order.amount_cents / 100) }}</td>
             <td>{{ order.status }}</td>

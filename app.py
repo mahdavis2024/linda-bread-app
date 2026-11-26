@@ -1,3 +1,4 @@
+import os
 import re
 import secrets
 import string
@@ -6,13 +7,28 @@ from zoneinfo import ZoneInfo
 
 from flask import Flask, redirect, render_template, request, url_for
 from flask_sqlalchemy import SQLAlchemy
+from flask_login import (
+    LoginManager,
+    UserMixin,
+    login_required,
+    login_user,
+    logout_user
+)
+from werkzeug.security import check_password_hash
+from dotenv import load_dotenv
 
+
+load_dotenv()
 
 app = Flask(__name__)
 
+app.config["SECRET_KEY"] = os.environ["SECRET_KEY"]
 app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///linda_bread.db"
 
 db = SQLAlchemy(app)
+
+login_manager = LoginManager(app)
+login_manager.login_view = "admin_login"
 
 @app.template_filter("portugal_datetime")
 def format_portugal_datetime(value):
@@ -26,7 +42,7 @@ def format_portugal_datetime(value):
         ZoneInfo("Europe/Lisbon")
     )
 
-    return portugal_time.strftime("%d/%m/%Y %H:%M")
+    return portugal_time.strftime("%d-%m-%Y %H:%M")
 
 
 class Order(db.Model):
@@ -84,6 +100,28 @@ class Order(db.Model):
         db.DateTime,
         nullable=True
     )
+
+
+class Admin(UserMixin, db.Model):
+    id = db.Column(
+        db.Integer,
+        primary_key=True
+    )
+
+    username = db.Column(
+        db.String(50),
+        unique=True,
+        nullable=False
+    )
+
+    password_hash = db.Column(
+        db.String(255),
+        nullable=False
+    )
+
+@login_manager.user_loader
+def load_admin(admin_id):
+    return db.session.get(Admin, int(admin_id))
 
 
 def generate_order_code():
@@ -316,7 +354,40 @@ def confirmation(order_code):
     )
 
 
+@app.route("/admin/login", methods=["GET", "POST"])
+def admin_login():
+    if request.method == "POST":
+        username = request.form.get("username", "").strip()
+        password = request.form.get("password", "")
+
+        admin = db.session.execute(
+            db.select(Admin).filter_by(username=username)
+        ).scalar_one_or_none()
+
+        if admin is None or not check_password_hash(
+            admin.password_hash,
+            password
+        ):
+            return render_template(
+                "admin_login.html",
+                title="Admin Login",
+                error="Invalid username or password.",
+                username=username
+            )
+
+        login_user(admin)
+
+        return redirect(
+            url_for("admin_orders")
+        )
+
+    return render_template(
+        "admin_login.html",
+        title="Admin Login"
+    )
+
 @app.route("/admin/orders")
+@login_required
 def admin_orders():
     orders = db.session.execute(
         db.select(Order).order_by(Order.created_at.desc())
@@ -326,6 +397,15 @@ def admin_orders():
         "admin_orders.html",
         title="Orders",
         orders=orders
+    )
+
+@app.route("/admin/logout")
+@login_required
+def admin_logout():
+    logout_user()
+
+    return redirect(
+        url_for("admin_login")
     )
 
 

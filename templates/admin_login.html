@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h1>Admin Login</h1>
+
+{% if error %}
+<p>{{ error }}</p>
+{% endif %}
+
+<form method="POST" action="{{ url_for('admin_login') }}">
+    <p>
+        <label for="username">Username:</label>
+        <input
+            type="text"
+            id="username"
+            name="username"
+            value="{{ username | default('') }}"
+            autocomplete="username"
+            required
+        >
+    </p>
+
+    <p>
+        <label for="password">Password:</label>
+        <input
+            type="password"
+            id="password"
+            name="password"
+            autocomplete="current-password"
+            required
+        >
+    </p>
+
+    <button type="submit">Log In</button>
+</form>
+
+{% endblock %}
