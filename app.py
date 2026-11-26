@@ -12,6 +12,7 @@ from flask import (
     redirect, 
     render_template, 
     request, 
+    send_from_directory,
     url_for
 )
 from flask_sqlalchemy import SQLAlchemy
@@ -612,6 +613,29 @@ def admin_settings():
         "admin_settings.html",
         title="Payment Settings",
         settings=settings,
+    )
+
+
+@app.route(
+    "/admin/orders/<order_code>/payment-proof"
+)
+@login_required
+def admin_payment_proof(order_code):
+    order = db.session.execute(
+        db.select(Order).filter_by(
+            order_code=order_code
+        )
+    ).scalar_one_or_none()
+
+    if order is None:
+        return "Order not found.", 404
+
+    if not order.screenshot_path:
+        return "Payment screenshot not found.", 404
+
+    return send_from_directory(
+        UPLOAD_FOLDER,
+        order.screenshot_path
     )
 
 
