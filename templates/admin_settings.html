@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h1>Payment Settings</h1>
+
+<h2>Current Settings</h2>
+
+<p>
+    <strong>MB WAY number:</strong>
+    {{ settings.mbway_number }}
+</p>
+
+<p>
+    <strong>WhatsApp contact:</strong>
+    {{ settings.whatsapp_number }}
+</p>
+
+
+{% with messages = get_flashed_messages() %}
+    {% if messages %}
+        {% for message in messages %}
+            <p>{{ message }}</p>
+        {% endfor %}
+    {% endif %}
+{% endwith %}
+
+{% if error %}
+<p>{{ error }}</p>
+{% endif %}
+
+<form method="POST" action="{{ url_for('admin_settings') }}">
+    <input
+        type="hidden"
+        name="csrf_token"
+        value="{{ csrf_token() }}"
+    >
+
+    <p>
+        <label for="mbway_number">MB WAY number:</label>
+
+        <input
+            type="tel"
+            id="mbway_number"
+            name="mbway_number"
+            value="{{ settings.mbway_number }}"
+            required
+        >
+    </p>
+
+    <p>
+        <label for="whatsapp_number">WhatsApp contact:</label>
+
+        <input
+            type="tel"
+            id="whatsapp_number"
+            name="whatsapp_number"
+            value="{{ settings.whatsapp_number }}"
+            required
+        >
+    </p>
+
+    <button type="submit">Save Settings</button>
+</form>
+
+<p>
+    <a href="{{ url_for('admin_orders') }}">
+        Return to Orders
+    </a>
+</p>
+
+{% endblock %}

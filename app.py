@@ -5,7 +5,14 @@ import string
 from datetime import date, datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
 
-from flask import Flask, redirect, render_template, request, url_for
+from flask import (
+    Flask, 
+    flash,
+    redirect, 
+    render_template, 
+    request, 
+    url_for
+)
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import (
     LoginManager,
@@ -17,6 +24,7 @@ from flask_login import (
 from flask_wtf.csrf import CSRFProtect
 from werkzeug.security import check_password_hash
 from dotenv import load_dotenv
+
 
 
 load_dotenv()
@@ -31,6 +39,7 @@ csrf = CSRFProtect(app)
 
 login_manager = LoginManager(app)
 login_manager.login_view = "admin_login"
+
 
 @app.template_filter("portugal_datetime")
 def format_portugal_datetime(value):
@@ -121,6 +130,24 @@ class Admin(UserMixin, db.Model):
         nullable=False
     )
 
+
+class BusinessSettings(db.Model):
+    id = db.Column(
+        db.Integer,
+        primary_key=True
+    )
+
+    mbway_number = db.Column(
+        db.String(30),
+        nullable=False
+    )
+
+    whatsapp_number = db.Column(
+        db.String(30),
+        nullable=False
+    )
+
+
 @login_manager.user_loader
 def load_admin(admin_id):
     return db.session.get(Admin, int(admin_id))
@@ -157,6 +184,26 @@ def calculate_price_cents(quantity):
         return prices_up_to_six[quantity]
 
     return 1000 + (quantity - 6) * 150
+
+
+def get_business_settings():
+    settings = db.session.get(
+        BusinessSettings,
+        1
+    )
+
+    if settings is None:
+        settings = BusinessSettings(
+            id=1,
+            mbway_number="",
+            whatsapp_number=""
+        )
+
+        db.session.add(settings)
+        db.session.commit()
+
+    return settings
+
 
 @app.route("/")
 def home():
@@ -408,6 +455,49 @@ def admin_logout():
 
     return redirect(
         url_for("admin_login")
+    )
+
+
+@app.route("/admin/settings", methods=["GET", "POST"])
+@login_required
+def admin_settings():
+    settings = get_business_settings()
+
+    if request.method == "POST":
+        mbway_number = request.form.get(
+            "mbway_number",
+            ""
+        ).strip()
+
+        whatsapp_number = request.form.get(
+            "whatsapp_number",
+            ""
+        ).strip()
+
+        if not mbway_number or not whatsapp_number:
+            return render_template(
+                "admin_settings.html",
+                title="Payment Settings",
+                settings=settings,
+                error="Please complete both fields.",
+                saved=False
+            )
+
+        settings.mbway_number = mbway_number
+        settings.whatsapp_number = whatsapp_number
+
+        db.session.commit()
+
+        flash("Payment settings saved successfully.")
+
+        return redirect(
+            url_for("admin_settings")
+        )
+
+    return render_template(
+        "admin_settings.html",
+        title="Payment Settings",
+        settings=settings,
     )
 
 
