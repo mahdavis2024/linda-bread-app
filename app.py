@@ -1,3 +1,4 @@
+# Standard library imports
 import os
 import re
 import secrets
@@ -6,6 +7,8 @@ from pathlib import Path
 from datetime import date, datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
 
+# Third-party imports
+from dotenv import load_dotenv
 from flask import (
     Flask, 
     flash,
@@ -25,11 +28,10 @@ from flask_login import (
 )
 from flask_wtf.csrf import CSRFProtect
 from werkzeug.security import check_password_hash
-from dotenv import load_dotenv
 from PIL import Image, UnidentifiedImageError
 
 
-
+# Application configuration
 load_dotenv()
 
 app = Flask(__name__)
@@ -38,6 +40,8 @@ app.config["SECRET_KEY"] = os.environ["SECRET_KEY"]
 app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///linda_bread.db"
 app.config["MAX_CONTENT_LENGTH"] = 5 * 1024 * 1024
 
+
+# Flask extensions
 db = SQLAlchemy(app)
 csrf = CSRFProtect(app)
 
@@ -45,6 +49,13 @@ login_manager = LoginManager(app)
 login_manager.login_view = "admin_login"
 
 
+# File storage configuration
+UPLOAD_FOLDER = Path(app.instance_path) / "uploads"
+
+UPLOAD_FOLDER.mkdir(
+    parents=True,
+    exist_ok=True
+)
 UPLOAD_FOLDER = Path(app.instance_path) / "uploads"
 
 UPLOAD_FOLDER.mkdir(
@@ -52,21 +63,8 @@ UPLOAD_FOLDER.mkdir(
     exist_ok=True
 )
 
-@app.template_filter("portugal_datetime")
-def format_portugal_datetime(value):
-    if value is None:
-        return ""
 
-    if value.tzinfo is None:
-        value = value.replace(tzinfo=timezone.utc)
-
-    portugal_time = value.astimezone(
-        ZoneInfo("Europe/Lisbon")
-    )
-
-    return portugal_time.strftime("%d-%m-%Y %H:%M")
-
-
+# Database models
 class Order(db.Model):
     id = db.Column(db.Integer, primary_key=True)
 
@@ -159,9 +157,80 @@ class BusinessSettings(db.Model):
     )
 
 
+class DayCapacity(db.Model):
+    id = db.Column(
+        db.Integer,
+        primary_key=True
+    )
+
+    production_date = db.Column(
+        db.Date,
+        unique=True,
+        nullable=False
+    )
+
+    capacity_total = db.Column(
+        db.Integer,
+        nullable=False,
+        default=21
+    )
+
+    capacity_used = db.Column(
+        db.Integer,
+        nullable=False,
+        default=0
+    )
+
+
+# Authentication helpers
 @login_manager.user_loader
 def load_admin(admin_id):
     return db.session.get(Admin, int(admin_id))
+
+
+# Jinja template filters
+@app.template_filter("portugal_datetime")
+def format_portugal_datetime(value):
+    if value is None:
+        return ""
+
+    if value.tzinfo is None:
+        value = value.replace(tzinfo=timezone.utc)
+
+    portugal_time = value.astimezone(
+        ZoneInfo("Europe/Lisbon")
+    )
+
+    return portugal_time.strftime("%d-%m-%Y %H:%M")
+
+
+# Application helper functions
+def ensure_booking_window_capacities(
+    minimum_date,
+    maximum_date
+):
+
+    current_date = minimum_date
+
+    while current_date <= maximum_date:
+        existing_capacity = db.session.execute(
+            db.select(DayCapacity).filter_by(
+                production_date=current_date
+            )
+        ).scalar_one_or_none()
+
+        if existing_capacity is None:
+            day_capacity = DayCapacity(
+                production_date=current_date,
+                capacity_total=21,
+                capacity_used=0
+            )
+
+            db.session.add(day_capacity)
+
+        current_date += timedelta(days=1)
+
+    db.session.commit()
 
 
 def generate_order_code():
@@ -216,6 +285,7 @@ def get_business_settings():
     return settings
 
 
+# Public customer routes
 @app.route("/")
 def home():
     return render_template(
@@ -232,6 +302,11 @@ def reserve():
     maximum_date = today + timedelta(days=14)
     minimum_date_text = minimum_date.isoformat()
     maximum_date_text = maximum_date.isoformat()
+
+    ensure_booking_window_capacities( 
+        minimum_date,
+        maximum_date
+    )
 
     if request.method == "POST":
         customer_name = request.form.get("customer_name", "").strip()
@@ -518,6 +593,7 @@ def confirmation(order_code):
     )
 
 
+# Protected admin routes
 @app.route("/admin/login", methods=["GET", "POST"])
 def admin_login():
     if request.method == "POST":
@@ -550,6 +626,17 @@ def admin_login():
         title="Admin Login"
     )
 
+
+@app.route("/admin/logout", methods=["POST"])
+@login_required
+def admin_logout():
+    logout_user()
+
+    return redirect(
+        url_for("admin_login")
+    )
+
+
 @app.route("/admin/orders")
 @login_required
 def admin_orders():
@@ -561,15 +648,6 @@ def admin_orders():
         "admin_orders.html",
         title="Orders",
         orders=orders
-    )
-
-@app.route("/admin/logout", methods=["POST"])
-@login_required
-def admin_logout():
-    logout_user()
-
-    return redirect(
-        url_for("admin_login")
     )
 
 
@@ -616,9 +694,7 @@ def admin_settings():
     )
 
 
-@app.route(
-    "/admin/orders/<order_code>/payment-proof"
-)
+@app.route("/admin/orders/<order_code>/payment-proof")
 @login_required
 def admin_payment_proof(order_code):
     order = db.session.execute(
@@ -639,9 +715,10 @@ def admin_payment_proof(order_code):
     )
 
 
+# Create missing database tables
 with app.app_context():
     db.create_all()
 
-
+# Start the development server
 if __name__ == "__main__":
     app.run(debug=True)
