@@ -96,9 +96,9 @@ class Order(db.Model):
     )
 
     status = db.Column(
-        db.String(20),
+        db.String(30),
         nullable=False,
-        default="PENDING"
+        default="AWAITING_PAYMENT"
     )
 
     created_at = db.Column(
@@ -359,15 +359,13 @@ def reserve():
         db.session.add(new_order)
         db.session.commit()
 
-
         # Success: If all validations pass, redirect to the confirmation page
         return redirect(
             url_for(
-                "confirmation",
+                "payment",
                 order_code=order_code
             )
         )
-
 
     # Request method is GET: render the empty reservation form
     return render_template(
@@ -376,6 +374,37 @@ def reserve():
         minimum_date=minimum_date_text,
         maximum_date=maximum_date_text
     )
+
+
+@app.route("/payment/<order_code>")
+def payment(order_code):
+    order = db.session.execute(
+        db.select(Order).filter_by(
+            order_code=order_code
+        )
+    ).scalar_one_or_none()
+
+    if order is None:
+        return "Order not found.", 404
+
+    settings = get_business_settings()
+
+    if not settings.mbway_number:
+        return "Payment settings are not configured.", 503
+
+    amount_text = (
+        f"{order.amount_cents // 100}."
+        f"{order.amount_cents % 100:02d}"
+    )
+
+    return render_template(
+        "payment.html",
+        title="Complete Payment",
+        order=order,
+        settings=settings,
+        amount=amount_text
+    )
+
 
 @app.route("/confirmation/<order_code>")
 def confirmation(order_code):

@@ -1,0 +1,117 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h1>Complete Your Payment</h1>
+
+<p>
+    Your reservation has been created and is awaiting payment.
+</p>
+
+<h2>Order Details</h2>
+
+<p>
+    <strong>Order code:</strong>
+    {{ order.order_code }}
+</p>
+
+<p>
+    <strong>Quantity:</strong>
+    {{ order.quantity }}
+</p>
+
+<p>
+    <strong>Production date:</strong>
+    {{ order.delivery_date.strftime("%d-%m-%Y") }}
+</p>
+
+<p>
+    <strong>Amount to pay:</strong>
+    €{{ amount }}
+</p>
+
+<h2>MB WAY Payment</h2>
+
+<p>
+    Send <strong>€{{ amount }}</strong> to:
+</p>
+
+<button
+    type="button"
+    class="copy-field"
+    data-copy-value="{{ settings.mbway_number }}"
+    data-copy-message="MB WAY number copied."
+>
+    <span>MB WAY number</span>
+    <strong>{{ settings.mbway_number }}</strong>
+    <span>Tap to copy</span>
+</button>
+
+<p>
+    Include this order code in the payment description:
+</p>
+
+<button
+    type="button"
+    class="copy-field"
+    data-copy-value="{{ order.order_code }}"
+    data-copy-message="Order code copied."
+>
+    <span>Order code</span>
+    <strong>{{ order.order_code }}</strong>
+    <span>Tap to copy</span>
+</button>
+
+<p id="copy-message" aria-live="polite"></p>
+
+<h2>Instructions</h2>
+
+<ol>
+    <li>Open MB WAY.</li>
+    <li>Send €{{ amount }} to {{ settings.mbway_number }}.</li>
+    <li>Include {{ order.order_code }} in the payment description.</li>
+    <li>Take a screenshot of the completed payment.</li>
+    <li>Return here to upload the screenshot.</li>
+</ol>
+
+<p>
+    <strong>Current status:</strong>
+    {{ order.status }}
+</p>
+
+<p>
+    Payment screenshot upload will be added next.
+</p>
+
+
+<script>
+    const copyFields = document.querySelectorAll(
+        "[data-copy-value]"
+    );
+
+    const copyMessage = document.getElementById(
+        "copy-message"
+    );
+
+    copyFields.forEach((field) => {
+        field.addEventListener("click", async () => {
+            const textToCopy = field.dataset.copyValue;
+            const successMessage =
+                field.dataset.copyMessage;
+
+            try {
+                await navigator.clipboard.writeText(
+                    textToCopy
+                );
+
+                copyMessage.textContent =
+                    successMessage;
+            } catch (error) {
+                copyMessage.textContent =
+                    "Copy failed. Please select and copy the value manually.";
+            }
+        });
+    });
+</script>
+
+{% endblock %}
