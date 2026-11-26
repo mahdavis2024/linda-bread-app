@@ -4,9 +4,17 @@
 
 <h1>Orders</h1>
 
-<p>
-    <a href="{{ url_for('admin_logout') }}">Log Out</a>
-</p>
+
+<form method="POST" action="{{ url_for('admin_logout') }}">
+    <input
+        type="hidden"
+        name="csrf_token"
+        value="{{ csrf_token() }}"
+    >
+
+    <button type="submit">Log Out</button>
+</form>
+
 
 {% if orders %}
 

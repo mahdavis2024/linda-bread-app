@@ -9,6 +9,12 @@
 {% endif %}
 
 <form method="POST" action="{{ url_for('reserve') }}">
+    <input
+        type="hidden"
+        name="csrf_token"
+        value="{{ csrf_token() }}"
+    >
+
     <p>
         <label for="customer_name">Name:</label>
         <input 

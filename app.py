@@ -14,6 +14,7 @@ from flask_login import (
     login_user,
     logout_user
 )
+from flask_wtf.csrf import CSRFProtect
 from werkzeug.security import check_password_hash
 from dotenv import load_dotenv
 
@@ -26,6 +27,7 @@ app.config["SECRET_KEY"] = os.environ["SECRET_KEY"]
 app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///linda_bread.db"
 
 db = SQLAlchemy(app)
+csrf = CSRFProtect(app)
 
 login_manager = LoginManager(app)
 login_manager.login_view = "admin_login"
@@ -399,7 +401,7 @@ def admin_orders():
         orders=orders
     )
 
-@app.route("/admin/logout")
+@app.route("/admin/logout", methods=["POST"])
 @login_required
 def admin_logout():
     logout_user()
