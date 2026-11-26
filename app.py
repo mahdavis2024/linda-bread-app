@@ -3,7 +3,7 @@ import secrets
 import string
 from datetime import date, datetime, timedelta, timezone
 
-from flask import Flask, render_template, request
+from flask import Flask, redirect, render_template, request, url_for
 from flask_sqlalchemy import SQLAlchemy
 
 
@@ -257,16 +257,12 @@ def reserve():
         db.session.commit()
 
 
-        # Success: If all validations pass, render the confirmation response
-        return render_template(
-            "confirmation.html",
-            title="Reservation Received",
-            customer_name=customer_name,
-            phone=phone,
-            delivery_date=delivery_date,
-            quantity=quantity_number, 
-            amount=amount_text,
-            order_code=order_code
+        # Success: If all validations pass, redirect to the confirmation page
+        return redirect(
+            url_for(
+                "confirmation",
+                order_code=order_code
+            )
         )
 
 
@@ -277,6 +273,32 @@ def reserve():
         minimum_date=minimum_date_text,
         maximum_date=maximum_date_text
     )
+
+@app.route("/confirmation/<order_code>")
+def confirmation(order_code):
+    order = db.session.execute(
+        db.select(Order).filter_by(order_code=order_code)
+    ).scalar_one_or_none()
+
+    if order is None:
+        return "Order not found.", 404
+
+    amount_text = (
+        f"{order.amount_cents // 100}."
+        f"{order.amount_cents % 100:02d}"
+    )
+
+    return render_template(
+        "confirmation.html",
+        title="Reservation Received",
+        customer_name=order.customer_name,
+        phone=order.phone,
+        delivery_date=order.delivery_date.isoformat(),
+        quantity=order.quantity,
+        amount=amount_text,
+        order_code=order.order_code
+    )
+
 
 with app.app_context():
     db.create_all()
