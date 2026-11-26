@@ -2,6 +2,7 @@ import re
 import secrets
 import string
 from datetime import date, datetime, timedelta, timezone
+from zoneinfo import ZoneInfo
 
 from flask import Flask, redirect, render_template, request, url_for
 from flask_sqlalchemy import SQLAlchemy
@@ -12,6 +13,21 @@ app = Flask(__name__)
 app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///linda_bread.db"
 
 db = SQLAlchemy(app)
+
+@app.template_filter("portugal_datetime")
+def format_portugal_datetime(value):
+    if value is None:
+        return ""
+
+    if value.tzinfo is None:
+        value = value.replace(tzinfo=timezone.utc)
+
+    portugal_time = value.astimezone(
+        ZoneInfo("Europe/Lisbon")
+    )
+
+    return portugal_time.strftime("%d/%m/%Y %H:%M")
+
 
 class Order(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -297,6 +313,19 @@ def confirmation(order_code):
         quantity=order.quantity,
         amount=amount_text,
         order_code=order.order_code
+    )
+
+
+@app.route("/admin/orders")
+def admin_orders():
+    orders = db.session.execute(
+        db.select(Order).order_by(Order.created_at.desc())
+    ).scalars().all()
+
+    return render_template(
+        "admin_orders.html",
+        title="Orders",
+        orders=orders
     )
 
 
