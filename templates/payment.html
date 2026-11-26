@@ -79,9 +79,50 @@
     {{ order.status }}
 </p>
 
-<p>
-    Payment screenshot upload will be added next.
-</p>
+<h2>Upload Payment Screenshot</h2>
+
+{% if error %}
+<p>{{ error }}</p>
+{% endif %}
+
+<form
+    method="POST"
+    action="{{ url_for('payment', order_code=order.order_code) }}"
+    enctype="multipart/form-data"
+>
+    <input
+        type="hidden"
+        name="csrf_token"
+        value="{{ csrf_token() }}"
+    >
+
+    <p>
+        <label for="payment_screenshot">
+            Payment screenshot:
+        </label>
+
+        <input
+            type="file"
+            id="payment_screenshot"
+            name="payment_screenshot"
+            accept="image/jpeg,image/png,image/webp"
+            required
+        >
+    </p>
+
+    <p>
+        Maximum file size: 5 MB.
+    </p>
+
+    <p>
+        If you have a problem uploading the screenshot,
+        contact us through WhatsApp.
+    </p>
+
+    <button type="submit">
+        Submit Payment Proof
+    </button>
+</form>
 
 
 <script>

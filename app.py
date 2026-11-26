@@ -2,6 +2,7 @@ import os
 import re
 import secrets
 import string
+from pathlib import Path
 from datetime import date, datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
 
@@ -24,6 +25,7 @@ from flask_login import (
 from flask_wtf.csrf import CSRFProtect
 from werkzeug.security import check_password_hash
 from dotenv import load_dotenv
+from PIL import Image, UnidentifiedImageError
 
 
 
@@ -33,6 +35,7 @@ app = Flask(__name__)
 
 app.config["SECRET_KEY"] = os.environ["SECRET_KEY"]
 app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///linda_bread.db"
+app.config["MAX_CONTENT_LENGTH"] = 5 * 1024 * 1024
 
 db = SQLAlchemy(app)
 csrf = CSRFProtect(app)
@@ -40,6 +43,13 @@ csrf = CSRFProtect(app)
 login_manager = LoginManager(app)
 login_manager.login_view = "admin_login"
 
+
+UPLOAD_FOLDER = Path(app.instance_path) / "uploads"
+
+UPLOAD_FOLDER.mkdir(
+    parents=True,
+    exist_ok=True
+)
 
 @app.template_filter("portugal_datetime")
 def format_portugal_datetime(value):
@@ -376,7 +386,7 @@ def reserve():
     )
 
 
-@app.route("/payment/<order_code>")
+@app.route("/payment/<order_code>", methods=["GET", "POST"])
 def payment(order_code):
     order = db.session.execute(
         db.select(Order).filter_by(
@@ -396,6 +406,81 @@ def payment(order_code):
         f"{order.amount_cents // 100}."
         f"{order.amount_cents % 100:02d}"
     )
+
+    if request.method == "POST":
+        screenshot = request.files.get(
+            "payment_screenshot"
+        )
+
+        if screenshot is None or not screenshot.filename:
+            amount_text = (
+                f"{order.amount_cents // 100}."
+                f"{order.amount_cents % 100:02d}"
+            )
+
+            return render_template(
+                "payment.html",
+                title="Complete Payment",
+                order=order,
+                settings=settings,
+                amount=amount_text,
+                error="Please select a payment screenshot."
+            )
+
+        try:
+            image = Image.open(screenshot.stream)
+            image.verify()
+
+            screenshot.stream.seek(0)
+
+            image = Image.open(screenshot.stream)
+            image.load()
+
+        except (UnidentifiedImageError, OSError):
+            amount_text = (
+                f"{order.amount_cents // 100}."
+                f"{order.amount_cents % 100:02d}"
+            )
+
+            return render_template(
+                "payment.html",
+                title="Complete Payment",
+                order=order,
+                settings=settings,
+                amount=amount_text,
+                error="The selected file is not a valid image."
+            )
+
+        image.thumbnail((1600, 1600))
+
+        if image.mode != "RGB":
+            image = image.convert("RGB")
+
+        screenshot_filename = (
+            f"{order.order_code}.webp"
+        )
+
+        screenshot_path = (
+            UPLOAD_FOLDER / screenshot_filename
+        )
+
+        image.save(
+            screenshot_path,
+            "WEBP",
+            quality=85
+        )
+
+        order.screenshot_path = screenshot_filename
+        order.status = "PENDING_VERIFICATION"
+
+        db.session.commit()
+
+        return redirect(
+            url_for(
+                "confirmation",
+                order_code=order.order_code
+            )
+        )
 
     return render_template(
         "payment.html",

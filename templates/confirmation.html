@@ -2,22 +2,21 @@
 
 {% block content %}
 
-<h1>Reservation Received</h1>
+<h1>Payment Proof Received</h1>
 
 <p>Thank you, {{ customer_name }}.</p>
 
 <p>
-    Your request for {{ quantity }} breads on {{ delivery_date }}
-    has been received.
+    Your payment screenshot has been received.
+    Your order is now pending verification.
 </p>
 
 <p>
-    Total amount: €{{ amount }}
+    <strong>Order code:</strong> {{ order_code }}
 </p>
 
 <p>
-    Your order code is:
-    <strong>{{ order_code }}</strong>
+    <strong>Current status:</strong> PENDING_VERIFICATION
 </p>
 
 <p>
