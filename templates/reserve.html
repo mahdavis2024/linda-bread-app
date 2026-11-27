@@ -53,6 +53,7 @@
             {% for day in available_days %}
                 <option
                     value="{{ day.date_value }}"
+                    data-remaining-capacity="{{ day.remaining_capacity }}"
                     {% if delivery_date | default('') == day.date_value %}
                         selected
                     {% endif %}
@@ -86,9 +87,72 @@
             step="1"
             required
         >
+        <span id="quantity-help">
+            Select a production date to see the available quantity.
+        </span>
     </p>
 
     <button type="submit">Continue</button>
 </form>
+
+<script>
+    const deliveryDateSelect = document.getElementById(
+        "delivery_date"
+    );
+
+    const quantityInput = document.getElementById(
+        "quantity"
+    );
+
+    const quantityHelp = document.getElementById(
+        "quantity-help"
+    );
+
+    function updateQuantityLimit() {
+        const selectedOption =
+            deliveryDateSelect.options[
+                deliveryDateSelect.selectedIndex
+            ];
+
+        const remainingCapacity = Number(
+            selectedOption.dataset.remainingCapacity
+        );
+
+        if (
+            !selectedOption.value ||
+            !Number.isInteger(remainingCapacity)
+        ) {
+            quantityInput.max = "21";
+
+            quantityHelp.textContent =
+                "Select a production date to see the available quantity.";
+
+            return;
+        }
+
+        quantityInput.max = String(
+            remainingCapacity
+        );
+
+        quantityHelp.textContent =
+            `Maximum available for this date: ${remainingCapacity}`;
+
+        if (
+            Number(quantityInput.value) >
+            remainingCapacity
+        ) {
+            quantityInput.value = String(
+                remainingCapacity
+            );
+        }
+    }
+
+    deliveryDateSelect.addEventListener(
+        "change",
+        updateQuantityLimit
+    );
+
+    updateQuantityLimit();
+</script>
 
 {% endblock %}

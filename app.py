@@ -457,6 +457,39 @@ def reserve():
                 available_days=available_days
             )
 
+        selected_day = next(
+            (
+                day
+                for day in available_days
+                if day["date_value"] == delivery_date
+            ),
+            None
+        )
+
+        if selected_day is None:
+            return render_template(
+                "reserve.html",
+                title="Reserve Bread",
+                error="Please select an available production date.",
+                customer_name=customer_name,
+                phone=phone,
+                delivery_date=delivery_date,
+                quantity=quantity,
+                available_days=available_days
+            )
+
+        if selected_day["sold_out"]:
+            return render_template(
+                "reserve.html",
+                title="Reserve Bread",
+                error="The selected production date is sold out.",
+                customer_name=customer_name,
+                phone=phone,
+                delivery_date="",
+                quantity=quantity,
+                available_days=available_days
+            )
+
         try:
             quantity_number = int(quantity)
         except ValueError:
@@ -476,6 +509,22 @@ def reserve():
                 "reserve.html",
                 title="Reserve Bread",
                 error="Quantity must be between 1 and 21 breads.",
+                customer_name=customer_name,
+                phone=phone,
+                delivery_date=delivery_date,
+                quantity=quantity,
+                available_days=available_days
+            )
+
+        if quantity_number > selected_day["remaining_capacity"]:
+            return render_template(
+                "reserve.html",
+                title="Reserve Bread",
+                error=(
+                    "Only "
+                    f"{selected_day['remaining_capacity']} "
+                    "breads are available for the selected date."
+                ),
                 customer_name=customer_name,
                 phone=phone,
                 delivery_date=delivery_date,
