@@ -101,6 +101,7 @@
             <th>Quantity</th>
             <th>Amount</th>
             <th>Status</th>
+            <th>Approved At</th>
             <th>Payment Proof</th>
             <th>Actions</th>
         </tr>
@@ -118,6 +119,13 @@
             <td>{{ order.quantity }}</td>
             <td>€{{ "%.2f" | format(order.amount_cents / 100) }}</td>
             <td>{{ order.status }}</td>
+            <td>
+                {% if order.approved_at %}
+                    {{ order.approved_at | portugal_datetime }}
+                {% else %}
+                    —
+                {% endif %}
+            </td>
             <td>
                 {% if order.screenshot_path %}
                     <a
@@ -187,14 +195,21 @@
 
                         <option
                             value="approve"
-                            disabled
+                            {% if order.status != "PENDING_VERIFICATION" %}
+                                disabled
+                            {% endif %}
                         >
                             Approve order
                         </option>
 
                         <option
                             value="reject"
-                            disabled
+                            {% if order.status not in [
+                                "AWAITING_PAYMENT",
+                                "PENDING_VERIFICATION"
+                            ] %}
+                                disabled
+                            {% endif %}
                         >
                             Reject order
                         </option>

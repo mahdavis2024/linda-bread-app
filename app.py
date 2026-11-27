@@ -949,6 +949,82 @@ def admin_order_action(order_code):
             f"{order.order_code}."
         )
 
+    elif action == "approve":
+        if order.status != "PENDING_VERIFICATION":
+            flash(
+                "Only orders pending verification "
+                "can be approved."
+            )
+
+            return redirect(
+                url_for("admin_orders")
+            )
+
+        day_capacity = db.session.execute(
+            db.select(DayCapacity).filter_by(
+                production_date=order.delivery_date
+            )
+        ).scalar_one_or_none()
+
+        if day_capacity is None:
+            flash(
+                "No capacity record exists for this "
+                "production date."
+            )
+
+            return redirect(
+                url_for("admin_orders")
+            )
+
+        current_available_capacity = (
+            day_capacity.capacity_total
+            - day_capacity.capacity_used
+        )
+
+        if order.quantity > current_available_capacity:
+            shortage = (
+                order.quantity
+                - current_available_capacity
+            )
+
+            flash(
+                f"Warning: approving order "
+                f"{order.order_code} exceeds total "
+                f"production capacity by {shortage} breads."
+            )
+
+        day_capacity.capacity_used += order.quantity
+        order.status = "APPROVED"
+        order.approved_at = datetime.now(timezone.utc)
+
+        db.session.commit()
+
+        flash(
+            f"Order {order.order_code} approved."
+        )
+
+
+    elif action == "reject":
+        if order.status not in {
+            "AWAITING_PAYMENT",
+            "PENDING_VERIFICATION"
+        }:
+            flash(
+                "Only open orders can be rejected."
+            )
+
+            return redirect(
+                url_for("admin_orders")
+            )
+
+        order.status = "REJECTED"
+
+        db.session.commit()
+
+        flash(
+            f"Order {order.order_code} rejected."
+        )
+
     else:
         flash(
             "Please select a valid order action."
@@ -957,6 +1033,8 @@ def admin_order_action(order_code):
     return redirect(
         url_for("admin_orders")
     )
+
+
 
 # Create missing database tables
 with app.app_context():
