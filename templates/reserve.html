@@ -41,15 +41,37 @@
 
     <p>
         <label for="delivery_date">Production date:</label>
-        <input 
-            type="date" 
-            id="delivery_date" 
-            name="delivery_date" 
-            value="{{ delivery_date | default('') }}" 
-            min="{{ minimum_date }}"
-            max="{{ maximum_date }}"
+        <select
+            id="delivery_date"
+            name="delivery_date"
             required
         >
+            <option value="">
+                Select a production date
+            </option>
+
+            {% for day in available_days %}
+                <option
+                    value="{{ day.date_value }}"
+                    {% if delivery_date | default('') == day.date_value %}
+                        selected
+                    {% endif %}
+                    {% if day.sold_out %}
+                        disabled
+                    {% endif %}
+                >
+                    {{ day.weekday }}
+                    — {{ day.date_display }}
+                    —
+                    {% if day.sold_out %}
+                        Sold out
+                    {% else %}
+                        {{ day.remaining_capacity }}
+                        breads available
+                    {% endif %}
+                </option>
+            {% endfor %}
+        </select>
     </p>
 
     <p>

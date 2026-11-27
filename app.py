@@ -285,6 +285,71 @@ def get_business_settings():
     return settings
 
 
+def get_available_booking_days(
+    minimum_date,
+    maximum_date
+):
+    capacities = db.session.execute(
+        db.select(DayCapacity)
+        .where(
+            DayCapacity.production_date >= minimum_date,
+            DayCapacity.production_date <= maximum_date
+        )
+        .order_by(DayCapacity.production_date)
+    ).scalars().all()
+
+    pending_orders = db.session.execute(
+        db.select(Order).where(
+            Order.delivery_date >= minimum_date,
+            Order.delivery_date <= maximum_date,
+            Order.status == "PENDING_VERIFICATION"
+        )
+    ).scalars().all()
+
+    pending_quantities = {}
+
+    for order in pending_orders:
+        pending_quantities[order.delivery_date] = (
+            pending_quantities.get(
+                order.delivery_date,
+                0
+            )
+            + order.quantity
+        )
+
+    available_days = []
+
+    for day in capacities:
+        pending_quantity = pending_quantities.get(
+            day.production_date,
+            0
+        )
+
+        remaining_capacity = (
+            day.capacity_total
+            - day.capacity_used
+            - pending_quantity
+        )
+
+        remaining_capacity = max(
+            remaining_capacity,
+            0
+        )
+
+        available_days.append({
+            "date_value": day.production_date.isoformat(),
+            "weekday": day.production_date.strftime("%A"),
+            "date_display": day.production_date.strftime(
+                "%d-%m-%Y"
+            ),
+            "remaining_capacity": remaining_capacity,
+            "sold_out": remaining_capacity == 0
+        })
+
+    return available_days
+
+
+
 # Public customer routes
 @app.route("/")
 def home():
@@ -300,10 +365,13 @@ def reserve():
     today = date.today()
     minimum_date = today + timedelta(days=1)
     maximum_date = today + timedelta(days=14)
-    minimum_date_text = minimum_date.isoformat()
-    maximum_date_text = maximum_date.isoformat()
 
     ensure_booking_window_capacities( 
+        minimum_date,
+        maximum_date
+    )
+
+    available_days = get_available_booking_days(
         minimum_date,
         maximum_date
     )
@@ -323,8 +391,7 @@ def reserve():
                 phone=phone,
                 delivery_date=delivery_date,
                 quantity=quantity,
-                minimum_date=minimum_date_text,
-                maximum_date=maximum_date_text
+                available_days=available_days
             )
 
         if len(customer_name) < 2:
@@ -336,8 +403,7 @@ def reserve():
                 phone=phone,
                 delivery_date=delivery_date,
                 quantity=quantity,
-                minimum_date=minimum_date_text,
-                maximum_date=maximum_date_text
+                available_days=available_days
             )
 
         if not re.fullmatch(r"[0-9+()\-\s]+", phone):
@@ -349,8 +415,7 @@ def reserve():
                 phone=phone,
                 delivery_date=delivery_date,
                 quantity=quantity,
-                minimum_date=minimum_date_text,
-                maximum_date=maximum_date_text
+                available_days=available_days
             )
 
         phone_digits = re.sub(r"\D", "", phone)
@@ -363,8 +428,7 @@ def reserve():
                 phone=phone,
                 delivery_date=delivery_date,
                 quantity=quantity,
-                minimum_date=minimum_date_text,
-                maximum_date=maximum_date_text
+                available_days=available_days
             )
 
         try:
@@ -378,8 +442,7 @@ def reserve():
                 phone=phone,
                 delivery_date=delivery_date,
                 quantity=quantity,
-                minimum_date=minimum_date_text,
-                maximum_date=maximum_date_text
+                available_days=available_days
             )
 
         if delivery_date_value < minimum_date or delivery_date_value > maximum_date:
@@ -391,8 +454,7 @@ def reserve():
                 phone=phone,
                 delivery_date=delivery_date,
                 quantity=quantity,
-                minimum_date=minimum_date_text,
-                maximum_date=maximum_date_text
+                available_days=available_days
             )
 
         try:
@@ -406,8 +468,7 @@ def reserve():
                 phone=phone,
                 delivery_date=delivery_date,
                 quantity=quantity,
-                minimum_date=minimum_date_text,
-                maximum_date=maximum_date_text
+                available_days=available_days
             )
 
         if quantity_number < 1 or quantity_number > 21:
@@ -419,17 +480,10 @@ def reserve():
                 phone=phone,
                 delivery_date=delivery_date,
                 quantity=quantity,
-                minimum_date=minimum_date_text,
-                maximum_date=maximum_date_text
+                available_days=available_days
             )
 
         amount_cents = calculate_price_cents(quantity_number)
-
-        amount_text = (
-                f"{amount_cents // 100}."
-                f"{amount_cents % 100:02d}"
-            )
-
         order_code = generate_order_code()
 
         # Commit successful order to the database order table
@@ -457,8 +511,7 @@ def reserve():
     return render_template(
         "reserve.html",
         title="Reserve Bread",
-        minimum_date=minimum_date_text,
-        maximum_date=maximum_date_text
+        available_days=available_days
     )
 
 
