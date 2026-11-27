@@ -205,11 +205,19 @@ def format_portugal_datetime(value):
 
 
 # Application helper functions
+
+def get_booking_window():
+    today = date.today()
+    minimum_date = today + timedelta(days=1)
+    maximum_date = today + timedelta(days=14)
+
+    return minimum_date, maximum_date
+
+
 def ensure_booking_window_capacities(
     minimum_date,
     maximum_date
 ):
-
     current_date = minimum_date
 
     while current_date <= maximum_date:
@@ -339,9 +347,10 @@ def get_available_booking_days(
         available_days.append({
             "date_value": day.production_date.isoformat(),
             "weekday": day.production_date.strftime("%A"),
-            "date_display": day.production_date.strftime(
-                "%d-%m-%Y"
-            ),
+            "date_display": day.production_date.strftime("%d-%m-%Y"),
+            "capacity_total": day.capacity_total,
+            "capacity_used": day.capacity_used,
+            "pending_quantity": pending_quantity,
             "remaining_capacity": remaining_capacity,
             "sold_out": remaining_capacity == 0
         })
@@ -362,9 +371,7 @@ def home():
 @app.route("/reserve", methods=["GET", "POST"])
 def reserve():
 
-    today = date.today()
-    minimum_date = today + timedelta(days=1)
-    maximum_date = today + timedelta(days=14)
+    minimum_date, maximum_date = get_booking_window()
 
     ensure_booking_window_capacities( 
         minimum_date,
@@ -746,10 +753,23 @@ def admin_orders():
         db.select(Order).order_by(Order.created_at.desc())
     ).scalars().all()
 
+    minimum_date, maximum_date = get_booking_window()
+
+    ensure_booking_window_capacities(
+        minimum_date,
+        maximum_date
+    )
+
+    capacity_days = get_available_booking_days(
+        minimum_date,
+        maximum_date
+    )
+
     return render_template(
         "admin_orders.html",
         title="Orders",
-        orders=orders
+        orders=orders,
+        capacity_days=capacity_days
     )
 
 
@@ -816,6 +836,127 @@ def admin_payment_proof(order_code):
         order.screenshot_path
     )
 
+
+@app.route(
+    "/admin/orders/<order_code>/action",
+    methods=["POST"]
+)
+@login_required
+def admin_order_action(order_code):
+    order = db.session.execute(
+        db.select(Order).filter_by(
+            order_code=order_code
+        )
+    ).scalar_one_or_none()
+
+    if order is None:
+        return "Order not found.", 404
+
+    action = request.form.get(
+        "action",
+        ""
+    ).strip()
+
+    if action == "mark_payment_reported":
+        if order.status != "AWAITING_PAYMENT":
+            flash(
+                "This order is not awaiting payment."
+            )
+
+            return redirect(
+                url_for("admin_orders")
+            )
+
+        minimum_date, maximum_date = (
+            get_booking_window()
+        )
+
+        available_days = (
+            get_available_booking_days(
+                minimum_date,
+                maximum_date
+            )
+        )
+
+        selected_day = next(
+            (
+                day
+                for day in available_days
+                if day["date_value"]
+                == order.delivery_date.isoformat()
+            ),
+            None
+        )
+
+        if selected_day is None:
+            flash(
+                "Warning: this order date is outside "
+                "the current booking window."
+            )
+
+        elif (
+            order.quantity
+            > selected_day["remaining_capacity"]
+        ):
+            shortage = (
+                order.quantity
+                - selected_day["remaining_capacity"]
+            )
+
+            flash(
+                f"Warning: order {order.order_code} "
+                f"exceeds remaining capacity by "
+                f"{shortage} breads. Payment was "
+                "still marked as reported."
+            )
+
+        order.status = "PENDING_VERIFICATION"
+
+        db.session.commit()
+
+        flash(
+            f"Payment reported for order "
+            f"{order.order_code}."
+        )
+
+    elif action == "undo_payment_reported":
+        if order.status != "PENDING_VERIFICATION":
+            flash(
+                "Only orders pending verification "
+                "can be returned to awaiting payment."
+            )
+
+            return redirect(
+                url_for("admin_orders")
+            )
+
+        if order.screenshot_path:
+            flash(
+                "This action is unavailable because "
+                "a payment screenshot was uploaded."
+            )
+
+            return redirect(
+                url_for("admin_orders")
+            )
+
+        order.status = "AWAITING_PAYMENT"
+
+        db.session.commit()
+
+        flash(
+            f"Payment report was undone for order "
+            f"{order.order_code}."
+        )
+
+    else:
+        flash(
+            "Please select a valid order action."
+        )
+
+    return redirect(
+        url_for("admin_orders")
+    )
 
 # Create missing database tables
 with app.app_context():

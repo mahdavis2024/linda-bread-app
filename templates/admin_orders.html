@@ -2,24 +2,90 @@
 
 {% block content %}
 
-<h1>Orders</h1>
+<h1>Admin Dashboard</h1>
 
+<nav aria-label="Admin navigation">
+    <a href="{{ url_for('admin_orders') }}">
+        Orders and Capacity
+    </a>
 
-<form method="POST" action="{{ url_for('admin_logout') }}">
+    |
+
+    <a href="{{ url_for('admin_settings') }}">
+        Payment Settings
+    </a>
+</nav>
+
+<form
+    method="POST"
+    action="{{ url_for('admin_logout') }}"
+>
     <input
         type="hidden"
         name="csrf_token"
         value="{{ csrf_token() }}"
     >
 
-    <button type="submit">Log Out</button>
+    <button type="submit">
+        Log Out
+    </button>
 </form>
 
-<p>
-    <a href="{{ url_for('admin_settings') }}">
-        Payment Settings
-    </a>
-</p>
+<hr>
+
+{% with messages = get_flashed_messages() %}
+    {% if messages %}
+        {% for message in messages %}
+            <p>{{ message }}</p>
+        {% endfor %}
+    {% endif %}
+{% endwith %}
+
+
+<h2>Production Capacity</h2>
+
+<table>
+    <thead>
+        <tr>
+            <th>Day</th>
+            <th>Production Date</th>
+            <th>Total</th>
+            <th>Approved</th>
+            <th>Pending Verification</th>
+            <th>Remaining</th>
+            <th>Availability</th>
+        </tr>
+    </thead>
+
+    <tbody>
+        {% for day in capacity_days %}
+        <tr>
+            <td>{{ day.weekday }}</td>
+
+            <td>{{ day.date_display }}</td>
+
+            <td>{{ day.capacity_total }}</td>
+
+            <td>{{ day.capacity_used }}</td>
+
+            <td>{{ day.pending_quantity }}</td>
+
+            <td>{{ day.remaining_capacity }}</td>
+
+            <td>
+                {% if day.sold_out %}
+                    Sold out
+                {% else %}
+                    Available
+                {% endif %}
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<h2>Orders</h2>
+
 
 {% if orders %}
 
@@ -36,6 +102,7 @@
             <th>Amount</th>
             <th>Status</th>
             <th>Payment Proof</th>
+            <th>Actions</th>
         </tr>
     </thead>
 
@@ -62,9 +129,81 @@
                     >
                         View Screenshot
                     </a>
+                {% elif order.status == "PENDING_VERIFICATION" %}
+                    Reported elsewhere
                 {% else %}
                     Not uploaded
                 {% endif %}
+            </td>
+            <td>
+                <form
+                    method="POST"
+                    action="{{ url_for(
+                        'admin_order_action',
+                        order_code=order.order_code
+                    ) }}"
+                >
+                    <input
+                        type="hidden"
+                        name="csrf_token"
+                        value="{{ csrf_token() }}"
+                    >
+
+                    <label
+                        for="action-{{ order.id }}"
+                    >
+                        Action:
+                    </label>
+
+                    <select
+                        id="action-{{ order.id }}"
+                        name="action"
+                        required
+                    >
+                        <option value="">
+                            Select action
+                        </option>
+
+                        <option
+                            value="mark_payment_reported"
+                            {% if order.status != "AWAITING_PAYMENT" %}
+                                disabled
+                            {% endif %}
+                        >
+                            Mark payment reported
+                        </option>
+
+                        <option
+                            value="undo_payment_reported"
+                            {% if
+                                order.status != "PENDING_VERIFICATION"
+                                or order.screenshot_path
+                            %}
+                                disabled
+                            {% endif %}
+                        >
+                            Undo payment reported
+                        </option>
+
+                        <option
+                            value="approve"
+                            disabled
+                        >
+                            Approve order
+                        </option>
+
+                        <option
+                            value="reject"
+                            disabled
+                        >
+                            Reject order
+                        </option>
+                    </select>
+
+                    <button type="submit">
+                        Apply
+                    </button>
+                </form>
             </td>
         </tr>
         {% endfor %}
