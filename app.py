@@ -19,6 +19,7 @@ from flask import (
     url_for
 )
 from flask_sqlalchemy import SQLAlchemy
+from flask_migrate import Migrate
 from flask_login import (
     LoginManager,
     UserMixin,
@@ -43,6 +44,7 @@ app.config["MAX_CONTENT_LENGTH"] = 5 * 1024 * 1024
 
 # Flask extensions
 db = SQLAlchemy(app)
+migrate = Migrate(app, db)
 csrf = CSRFProtect(app)
 
 login_manager = LoginManager(app)
@@ -1035,10 +1037,6 @@ def admin_order_action(order_code):
     )
 
 
-
-# Create missing database tables
-with app.app_context():
-    db.create_all()
 
 # Start the development server
 if __name__ == "__main__":
