@@ -15,6 +15,12 @@
         value="{{ csrf_token() }}"
     >
 
+    <input
+        type="hidden"
+        name="submission_token"
+        value="{{ submission_token }}"
+    >
+
     <p>
         <label for="customer_name">Name:</label>
         <input 

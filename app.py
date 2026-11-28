@@ -76,6 +76,12 @@ class Order(db.Model):
         nullable=False
     )
 
+    submission_token = db.Column(
+        db.String(64),
+        unique=True,
+        nullable=True
+    )
+
     customer_name = db.Column(
         db.String(100),
         nullable=False
@@ -385,6 +391,50 @@ def reserve():
         maximum_date
     )
 
+    if request.method == "GET":
+        submission_token = request.args.get(
+            "token",
+            ""
+        ).strip()
+
+        if not submission_token:
+            submission_token = secrets.token_urlsafe(32)
+
+            return redirect(
+                url_for(
+                    "reserve",
+                    token=submission_token
+                )
+            )
+    else:
+        submission_token = request.form.get(
+            "submission_token",
+            ""
+        ).strip()
+
+    if request.method == "POST" and submission_token:
+        existing_order = db.session.execute(
+            db.select(Order).filter_by(
+                submission_token=submission_token
+            )
+        ).scalar_one_or_none()
+
+        if existing_order is not None:
+            if existing_order.status == "AWAITING_PAYMENT":
+                return redirect(
+                    url_for(
+                        "payment",
+                        order_code=existing_order.order_code
+                    )
+                )
+
+            return redirect(
+                url_for(
+                    "confirmation",
+                    order_code=existing_order.order_code
+                )
+            )
+
     if request.method == "POST":
         customer_name = request.form.get("customer_name", "").strip()
         phone = request.form.get("phone", "").strip()
@@ -400,7 +450,8 @@ def reserve():
                 phone=phone,
                 delivery_date=delivery_date,
                 quantity=quantity,
-                available_days=available_days
+                available_days=available_days,
+                submission_token=submission_token
             )
 
         if len(customer_name) < 2:
@@ -412,7 +463,8 @@ def reserve():
                 phone=phone,
                 delivery_date=delivery_date,
                 quantity=quantity,
-                available_days=available_days
+                available_days=available_days,
+                submission_token=submission_token
             )
 
         if not re.fullmatch(r"[0-9+()\-\s]+", phone):
@@ -424,7 +476,8 @@ def reserve():
                 phone=phone,
                 delivery_date=delivery_date,
                 quantity=quantity,
-                available_days=available_days
+                available_days=available_days,
+                submission_token=submission_token
             )
 
         phone_digits = re.sub(r"\D", "", phone)
@@ -437,7 +490,8 @@ def reserve():
                 phone=phone,
                 delivery_date=delivery_date,
                 quantity=quantity,
-                available_days=available_days
+                available_days=available_days,
+                submission_token=submission_token
             )
 
         try:
@@ -451,7 +505,8 @@ def reserve():
                 phone=phone,
                 delivery_date=delivery_date,
                 quantity=quantity,
-                available_days=available_days
+                available_days=available_days,
+                submission_token=submission_token
             )
 
         if delivery_date_value < minimum_date or delivery_date_value > maximum_date:
@@ -463,7 +518,8 @@ def reserve():
                 phone=phone,
                 delivery_date=delivery_date,
                 quantity=quantity,
-                available_days=available_days
+                available_days=available_days,
+                submission_token=submission_token
             )
 
         selected_day = next(
@@ -484,7 +540,8 @@ def reserve():
                 phone=phone,
                 delivery_date=delivery_date,
                 quantity=quantity,
-                available_days=available_days
+                available_days=available_days,
+                submission_token=submission_token
             )
 
         if selected_day["sold_out"]:
@@ -496,7 +553,8 @@ def reserve():
                 phone=phone,
                 delivery_date="",
                 quantity=quantity,
-                available_days=available_days
+                available_days=available_days,
+                submission_token=submission_token
             )
 
         try:
@@ -510,7 +568,8 @@ def reserve():
                 phone=phone,
                 delivery_date=delivery_date,
                 quantity=quantity,
-                available_days=available_days
+                available_days=available_days,
+                submission_token=submission_token
             )
 
         if quantity_number < 1 or quantity_number > 21:
@@ -522,7 +581,8 @@ def reserve():
                 phone=phone,
                 delivery_date=delivery_date,
                 quantity=quantity,
-                available_days=available_days
+                available_days=available_days,
+                submission_token=submission_token
             )
 
         if quantity_number > selected_day["remaining_capacity"]:
@@ -538,7 +598,8 @@ def reserve():
                 phone=phone,
                 delivery_date=delivery_date,
                 quantity=quantity,
-                available_days=available_days
+                available_days=available_days,
+                submission_token=submission_token
             )
 
         amount_cents = calculate_price_cents(quantity_number)
@@ -547,6 +608,7 @@ def reserve():
         # Commit successful order to the database order table
         new_order = Order(
             order_code=order_code,
+            submission_token=submission_token,
             customer_name=customer_name,
             phone=phone,
             quantity=quantity_number,
@@ -569,7 +631,8 @@ def reserve():
     return render_template(
         "reserve.html",
         title="Reserve Bread",
-        available_days=available_days
+        available_days=available_days,
+        submission_token=submission_token
     )
 
 
